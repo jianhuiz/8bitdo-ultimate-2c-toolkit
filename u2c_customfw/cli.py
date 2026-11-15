@@ -106,7 +106,7 @@ def _dongle_in_boot(f) -> bool:
         ch.close()
 
 
-def _dongle_change(args, store, f, tweaks=(), source: str | None = None):
+def _dongle_change(args, store, f, tweaks=(), source: str | None = None, chosen=None):
     """Install (with these tweaks) or restore (source "backup" or "stock") the dongle's bank A."""
     if f.mode == "dongle_paired":
         raise Exit(2, DONGLE_ALONE)
@@ -136,8 +136,9 @@ def _dongle_change(args, store, f, tweaks=(), source: str | None = None):
         base = cur if dng.state(cur)[0] else next((d[dng.BASE:dng.END] for _, d in found if dng.state(d[dng.BASE:dng.END])[0]), None)
         if base is None:
             raise Exit(2, "Neither the dongle nor its backups hold firmware this app recognises, so nothing was written.")
-        new = dng.target(base, tweaks)
-        what = (f"This installs {dng.describe(tweaks)} on the dongle." if tweaks
+        new = dng.target(base, tweaks, chosen)
+        called = " ".join(f"{dng.NAMES[k].label}: “{(chosen or {}).get(k, dng.NAMES[k].default)}”." for k in dng.NAMES if k in tweaks)
+        what = (f"This installs {dng.describe(tweaks)} on the dongle." + (f" {called}" if called else "") if tweaks
                 else "This installs 8BitDo's original firmware 1.03 on the dongle.")
     if cur == new:
         args.unchanged = True
@@ -305,7 +306,11 @@ def cmd_patch(args, store):
     if f.mode.startswith("dongle") or _dongle_in_boot(f):
         if any(k not in dng.TWEAKS for k in keys):
             raise Exit(2, f"The dongle's tweaks are {', '.join(dng.TWEAKS)}. Nothing was written.")
-        return _dongle_change(args, store, f, keys)
+        chosen = {k: v for k, v in (("dongle_360", getattr(args, "xinput_name", None)), ("dongle_dinput", getattr(args, "dinput_name", None))) if v is not None}
+        for k in chosen:
+            if k not in keys:
+                raise Exit(2, f"--{'xinput' if k == 'dongle_360' else 'dinput'}-name needs the {k} tweak. Nothing was written.")
+        return _dongle_change(args, store, f, keys, chosen=chosen)
     keys += ["ble_interval"] if keys and "ble_interval" not in keys else []   # as the app: every install asks for 12.5 ms
     stock = None
 
@@ -357,6 +362,8 @@ def main(argv=None) -> int:
     p.add_argument("--tweaks", default="", help="comma list of: " + ", ".join(shown(k for k, r in recipes.RECIPES.items() if not r.earlier_form_of))
                    + "; for the dongle: " + ", ".join(dng.TWEAKS))
     p.add_argument("--backup"); p.add_argument("--download", action="store_true", help="use 8BitDo's v1.09 from its server")
+    p.add_argument("--xinput-name", help=f"the dongle's name in X-input, with dongle_360 (default “{dng.NAMES['dongle_360'].default}”)")
+    p.add_argument("--dinput-name", help=f"the dongle's name in D-input, with dongle_dinput (default “{dng.NAMES['dongle_dinput'].default}”)")
     p = sub.add_parser("restore", parents=[common])
     p.add_argument("source", choices=["backup", "stock"])
     p.add_argument("--backup", help="this backup file instead of the newest recognised one of the controller")

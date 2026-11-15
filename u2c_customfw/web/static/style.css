@@ -77,6 +77,8 @@ main{flex:1;overflow:auto;padding:14px 22px}
 .pre li.ok{color:var(--fg)}.pre li svg{width:15px;flex:none}.pre li.ok svg{color:var(--accent)}
 .tw{position:relative;display:flex;align-items:center;gap:12px;padding:5px 12px;border-radius:10px;background:var(--card2);margin-bottom:6px;cursor:pointer;font-size:13.5px}
 .tw input{position:absolute;opacity:0;pointer-events:none}
+.tw input.dname{position:static;opacity:1;pointer-events:auto;display:block;width:100%;max-width:270px;box-sizing:border-box;margin:4px 0 2px;padding:3px 8px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--fg);font:inherit;font-size:12.5px;cursor:text}
+.tw input.dname[hidden]{display:none}.tw input.dname:focus{outline:2px solid var(--accent);outline-offset:-1px}.tw input.dname:invalid{border-color:var(--warn)}.tw span:has(>.dname){flex:1;min-width:0}
 .tw.off{opacity:.45;cursor:not-allowed}
 .sw{width:34px;height:20px;border-radius:99px;background:#3a414d;box-shadow:0 0 0 1px var(--line);position:relative;flex:none;transition:.15s}
 .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}

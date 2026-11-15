@@ -44,6 +44,8 @@ let st = null, fw = null, reading = false, busy = false, base = "backup";
 
 const tweakBoxes = () => [...document.querySelectorAll(".tweak")];
 const dongleBoxes = () => [...document.querySelectorAll(".dongle-tweak")];
+const dongleNameBoxes = () => [...document.querySelectorAll(".dname")];
+const dongleNames = () => Object.fromEntries(dongleNameBoxes().filter((b) => dongleTweaks().includes(b.dataset.for)).map((b) => [b.dataset.for, b.value.trim() || b.dataset.default]));
 const RING_NAMES = { ring_normal: "normal", ring_25: "25 %", ring_5: "5 %", ring_1: "1 %", ring_0_1: "0.1 %", ring_off: "off" };
 let ringKept = "", dongleRead = null;  // the Home ring level installed, kept by the next install; the Settings tab changes it
 const RING_CODE_USERS = ["battery_alerts", "settings", "fixes", "stick_precision", "cpu_rest"];
@@ -139,8 +141,10 @@ function render() {
   $("ctrl-tweaks").hidden = $("tweaks-opts").hidden = dongleOnly; $("dongle-tweaks").hidden = !dongleOnly;
   if (isDongleFw && fw !== dongleRead) {   // each read starts from what's installed
     dongleRead = fw; dongleBoxes().forEach((x) => (x.checked = x.defaultChecked = fw.tweaks.some((t) => t.key === x.value && t.on)));
+    dongleNameBoxes().forEach((b) => { const n = (fw.names || {})[b.dataset.for]; b.value = n && n.held && n.held !== b.dataset.stock ? n.held : b.dataset.default; });   // the name installed, else the default to edit
   }
   dongleBoxes().forEach((x) => { x.disabled = busy || !dongleReady; x.closest(".tw").classList.toggle("off", x.disabled); });
+  dongleNameBoxes().forEach((b) => { const on = dongleBoxes().find((x) => x.value === b.dataset.for); b.hidden = !on.checked; b.disabled = on.disabled; });
   $("dongle-note").hidden = !paired;
   const installWhy = dongleOnly ? (paired ? "Turn the controller off so the dongle is connected on its own." : "") : !tweaks().length ? "Choose at least one tweak." : !fw || fw.known !== false || on109 ? ""
     : fw.version ? "This app only installs tweaks over firmware 1.09." : "This firmware can't be identified. Restore your backup first.";
@@ -351,6 +355,7 @@ document.querySelectorAll("[data-help]").forEach((b) => (b.onclick = () => showH
 $("help-open").onclick = () => { showHelp(tab === "firmware" ? (onDongle() ? "dongle" : "start") : tab); $("help").showModal(); };  // opens on the tab in view
 $("help-close").onclick = () => $("help").close();
 tweakBoxes().forEach((x) => (x.onchange = render));
+dongleBoxes().forEach((x) => (x.onchange = render));   // its name box shows with it
 function popover(button, ...content) {  // a small pop-up under an (i) button, outside any label so clicks in it toggle nothing
   const pop = document.createElement("div");
   pop.id = `pop-${document.querySelectorAll(".pop").length}`; pop.className = "pop"; pop.popover = "auto"; pop.append(...content);
@@ -386,13 +391,13 @@ const onDongle = () => !!fw && fw.device === "dongle";
 const restarts = () => (st && st.devices.some((d) => d.mode === "boot") ? "The app restarts the controller afterwards."
   : "The app restarts the controller into update mode to write it, then restarts it again.");
 const dongleTweaks = () => dongleBoxes().filter((x) => x.checked).map((x) => x.value);
-$("patch-dry").onclick = () => runJob("Checking…", "/api/patch", { tweaks: onDongle() ? dongleTweaks() : tweaks(), base, write: false }, "Check passed");
+$("patch-dry").onclick = () => runJob("Checking…", "/api/patch", onDongle() ? { tweaks: dongleTweaks(), names: dongleNames(), base, write: false } : { tweaks: tweaks(), base, write: false }, "Check passed");
 $("patch-write").onclick = async () => {
   if (onDongle()) {
-    const chosen = dongleBoxes().filter((x) => x.checked).map((x) => x.parentElement.lastElementChild.firstChild.textContent);
+    const chosen = dongleBoxes().filter((x) => x.checked).map((x) => x.parentElement.lastElementChild.firstChild.textContent + (x.value in dongleNames() ? `: “${dongleNames()[x.value]}”` : ""));
     if (await ask("Install this on the dongle?", "This changes the dongle's firmware. The app restarts the dongle into update mode to write it, then restarts it again. Installing modified firmware probably voids the dongle's warranty.",
       chosen.length ? chosen : ["No tweaks: the original firmware 1.03"], "Install", "install"))
-      runJob("Installing…", "/api/patch", { tweaks: dongleTweaks(), write: true }, "Installed on the dongle");
+      runJob("Installing…", "/api/patch", { tweaks: dongleTweaks(), names: dongleNames(), write: true }, "Installed on the dongle");
     return;
   }
   if (await ask("Install these tweaks?", `This changes the controller's firmware. ${restarts()} Installing modified firmware probably voids the controller\'s warranty.`, tweakTitles(), "Install", "install"))

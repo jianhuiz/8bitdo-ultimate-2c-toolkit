@@ -19,6 +19,7 @@ These are the checks the app makes before and while it writes to the controller 
 ## The dongle
 
 - **A backup of the same dongle.** A write needs a backup of that very dongle: its bootloader and its calibration must match.
+- **Names are only text.** The dongle's names in X-input and D-input are the only bytes you choose: 1 to 38 or 36 printable ASCII characters, written only where that name and its length live, and read back as installed only when they agree. Everything else is checked against 8BitDo's 1.03 by hash.
 - **Only the firmware.** The app only rewrites the firmware (`0x6000`-`0x10000`), and writes the app header last. It never writes the update record, the second firmware copy, the calibration or the licence sector.
 - **Update mode is checked.** The app puts the dongle in update mode by itself, and checks there that its update-mode code and calibration match the backup before it erases anything. After writing, it reads the firmware back and restarts the dongle.
 - **An interrupted write.** If a write stops before the header is written, the dongle stays in update mode, the app says so, and Restore still works.

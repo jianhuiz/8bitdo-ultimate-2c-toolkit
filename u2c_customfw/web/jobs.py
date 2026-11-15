@@ -66,7 +66,7 @@ class Runner:
         try:   # until the thread runs, nothing else frees the device
             if self.writing:
                 self.awake = keep_awake()
-            args = SimpleNamespace(**{**dict(write=False, tweaks="", backup=None, download=False, source="backup", expect=None,
+            args = SimpleNamespace(**{**dict(write=False, tweaks="", backup=None, download=False, source="backup", expect=None, xinput_name=None, dinput_name=None,
                                              accept_disclaimer=False, force_unknown=False), **params})
             log = get_logger(self.store)
             log.info("job %s %s", name, params)   # the page never sends a path
